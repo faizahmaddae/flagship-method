@@ -1,0 +1,280 @@
+---
+name: {{SLUG}}-builder
+description: >-
+  Operating method for building and shipping {{PROJECT_NAME}}, built with {{STACK}}. Hard bans:
+  [TODO: e.g. "no game engine, no platform UI kit"]. Use this whenever ANY model works on {{SLUG}}.
+  It teaches HOW to work here: orient from the docs, keep the core proven, build visuals with a
+  render-look-adjust loop to a premium bar, keep per-frame animation out of the state store, ship
+  small verified slices and hand off cleanly. Read with docs/{{SLUG}}/PROGRESS, PLAN, ARCHITECTURE,
+  DECISIONS, DESIGN and RESEARCH before writing code.
+---
+
+# {{PROJECT_NAME}} builder: how to work here
+
+<!-- flagship-method template: the per-project operating method, addressed to ANY model.
+§0–§5 stay short (about 100–150 lines) and change rarely. §6 (traps) grows every session.
+Fill every TODO marker from the kickoff; delete a guidance comment once its section is filled.
+A slot that does not apply becomes "none: <reason> (DECISIONS #n)", never silent fixed text; a slot
+only a later phase can fill reads "Written in Phase <n.m>; decided so far: <…>".
+Keep the frontmatter description under 1,024 characters and free of angle brackets.
+How to write it: flagship-method references/project-kit.md §5. -->
+
+{{ONE_LINE}} Built for {{PLATFORMS}} with {{STACK}}. [TODO: one or two lines: how things are drawn,
+what is banned and why, and the lineage (whose method this inherits).]
+
+**Prime directive:** high-quality thinking is the scarce resource. Put it in the docs, so the next
+worker continues at full quality. That may be a smaller model, or you with no memory.
+
+**Second directive:** the product is judged by how it *looks and feels*, and {{OWNER}} is the
+judge. [TODO: the owner's actual criterion, in their words where possible.] A green test suite
+under programmer art is a failure.
+
+---
+
+## 0. Orient (every session)
+
+1. Read `docs/{{SLUG}}/` in order: PROGRESS → PLAN → ARCHITECTURE → DECISIONS → DESIGN (before any
+   visual, motion or sound work) → RESEARCH.
+<!-- if:monetization -->
+   Then MONETIZATION before any money, data, consent or analytics work.
+<!-- /if:monetization -->
+<!-- if:release -->
+   Then RELEASE and `store/` before building a release or changing any store text.
+<!-- /if:release -->
+2. Run the baseline in `CLAUDE.md`. If it is red, fixing it is the task. Trust the run, not
+   PROGRESS's claim. First decide whether the code or the environment is red.
+3. Take the exact next step from PROGRESS "In progress". If there is none, take the first unmet
+   acceptance criterion in PLAN.
+
+**When the docs conflict:**
+- PROGRESS and PLAN decide *what next*; DECISIONS and ARCHITECTURE decide *how*;
+- RESEARCH decides *the facts*; DESIGN decides *the look and feel*;
+<!-- if:monetization -->
+- MONETIZATION decides *money and data*;
+<!-- /if:monetization -->
+<!-- if:release -->
+- RELEASE and `store/` decide *how a release is built and proved, and what the store pages say*;
+<!-- /if:release -->
+- this skill restates invariants; DECISIONS is their source, so if they differ, fix this file.
+
+## 1. The method
+
+**The core is proven, not trusted.** [TODO: how correctness is established here.]
+<!-- kind:game -->
+- The house invariant: [TODO: e.g. "never show a puzzle that cannot be completed, and never one
+  with two solutions"], proven by [TODO: e.g. "an offline generator, re-proved in CI by an
+  independent implementation"].
+<!-- /kind:game -->
+<!-- kind:app -->
+- The house invariant: [TODO: e.g. "never lose, duplicate or misdate a user's data; every balance
+  is derived from stored facts"], proven by [TODO: e.g. "property tests over random data, and a
+  reference library for the calendar"].
+<!-- /kind:app -->
+- Read review output in its human form (boards, screens, copy, real-looking data). Assertions only
+  check what you already thought to doubt.
+
+**Isolate layers** (ARCHITECTURE §1, enforced by `[TODO: guard test]`).
+- `[TODO: core dir]` is pure: it imports neither the UI framework nor the state library.
+- `[TODO: state dir]` is the only place state containers live.
+- Every SDK sits behind a port in `[TODO: services dir]`, imported by exactly one file.
+
+**State rules** (DECISIONS #[TODO: n]):
+1. **State is immutable.** Replace, never mutate in place: stores that filter updates by equality
+   silently drop in-place changes.
+2. **Per-frame values never go through the state store.** Fingers, springs, poses, particles and
+   scroll offsets live in animation objects owned by the view that paints them.
+3. **The model runs ahead of the animation.** Commit the change, emit an event, and let the
+   choreography catch up. Time reactions to the visual contact, not to the commit.
+<!-- Stack specifics (the state library's retry, dispose and rebuild behaviour) go into DECISIONS
+and §6, dated. Flutter: flagship-method references/stack-flutter.md. -->
+
+**Verify by running, always.** After every slice: analysis clean, tests green, the app
+cold-launched: no unit or UI test runs the real entry point, so only a cold launch sees it fail.
+
+**Verify visuals by looking.**
+- Render every renderer and screen to PNG with `[TODO: render harness command]`, into
+  `[TODO: gitignored output folder]`. Check the important ones on a simulator or emulator.
+- **Budget three looks per visual change,** and write down what each look found. The first renders
+  of anything have faults that every test passes.
+- The look matrix is the skill's (flagship-method references/visual-design.md §13.1). Here:
+  [TODO: the phone sizes] × [TODO: the themes, in every lighting the product ships] × [TODO: the
+  locales and directions].
+- Answer DESIGN's quality bar on every screen: the seven questions and two edge checks
+  (flagship-method references/visual-design.md §The quality bar), plus
+<!-- kind:game -->
+  G1–G3 (references/domain-games.md §1)
+<!-- /kind:game -->
+<!-- kind:app -->
+  A1–A4 and the app checks (references/domain-apps.md §2)
+<!-- /kind:app -->
+  and this project's own. Then put the screen beside the category winner's equivalent and name the
+  one element they polished that we left plain.
+
+**Feel is tuned on a device.** Motion and sound numbers in DESIGN are *Proposed* starting values.
+Change them only after watching or listening on a simulator or phone. Record old → new, and why, in
+DESIGN.
+
+**Ship small vertical slices** through the pipeline: plan written → skeptics → freeze contracts →
+build (≥ 3 looks on anything visible) → integrate (cold launch) → analyze + full suite →
+adversarial review → fixer → mutation proofs → confirming look and every gate → docs → one commit.
+
+**Never fabricate an API.** Read the installed source of every package and SDK you call
+([TODO: where the package cache and SDK live on this machine]). Read the platform implementation,
+not only the shared interface. When the source and a research brief disagree, the source wins. Pin
+surprising library behaviour in small tests under `docs/{{SLUG}}/reference/<lib>/`, with a README
+saying they are demos, not code to copy.
+
+**Every guard is seen to fail.** A new test counts only after you have removed its fix or feature
+and watched it fail, in an isolated copy (never the shared tree), by assertion (a compile error
+proves nothing).
+
+## 2. Non-negotiable invariants
+
+<!-- Numbered. Each cites the DECISIONS entry that made it and names its guard. Delete slots that do
+not apply; add the product's own promises. -->
+
+<!-- kind:game -->
+1. [TODO: content correctness]: every shipped item proven, and re-proved in CI by `[TODO: verifier]`
+   (DECISIONS #[TODO: n]).
+2. **The player is judged by the rules, never by comparison with a stored answer** (DECISIONS
+   #[TODO: n]).
+3. [TODO: fairness promises, e.g. "undo, retry and restart are always free; no lives, no timers"]
+   (DECISIONS #[TODO: n]).
+<!-- /kind:game -->
+<!-- kind:app -->
+1. [TODO: data correctness, e.g. "a user's data is never lost, duplicated or misdated"]: guarded by
+   `[TODO: test]` (DECISIONS #[TODO: n]).
+2. **Derived values are computed from stored facts, never stored as counters** (DECISIONS
+   #[TODO: n]). [TODO: for shared or server data, every mutating request carries an idempotency
+   key, so a retry cannot apply twice; or "none: local-only data (DECISIONS #n)".]
+3. [TODO: product promises, e.g. "what is free stays free; a user's own data and export are never
+   paywalled"] (DECISIONS #[TODO: n]).
+<!-- /kind:app -->
+4. **No animation blocks input,** except [TODO: the named, skippable sequences; the next action
+   live within 300 ms]. **Motion Off removes presentation motion** (transitions, shake, hit-stop,
+   flashes, parallax, camera moves, ambient life, celebratory shows); motion that IS the task (a
+   real-time simulation, a video, a live map) continues; outcomes are identical for the same input.
+   Assists that change the task are separate, labelled options, never the Motion switch
+   (flagship-method references/motion-and-feel.md §10; DECISIONS #[TODO: n]).
+5. **Banned words** in any text a user or store sees: [TODO: the list, or "the list in <file>"]. One
+   list, used for every surface.
+6. [TODO: the art provenance rule, as decided with {{OWNER}}].
+7. Every renderer has a paint test and a bounds test. Real fonts are loaded in tests, one for every
+   script the UI uses.
+8. Saves are atomic and versioned. Never overwrite a save that failed to parse; refuse a newer
+   version.
+9. No production secrets or ids in the repo.
+10. Accessibility: every interactive element is a semantics node with a real touch area of at
+    least 44 pt; no hue-only signal; contrast as in DESIGN §[TODO: n]; nothing flashes more than
+    three times in any one second above the general and red flash thresholds
+    (flagship-method references/ux-and-accessibility.md §15).
+11. Nothing outward or irreversible (any upload, a test track included; publishing; a purchase; an
+    account setting) without an explicit request or approval from {{OWNER}} for that specific step.
+    Nothing permanent (ids, store records, product ids, paid vendors, published text) is made from
+    an ASSUMED answer (DECISIONS).
+<!-- if:monetization -->
+12. Money and data rules follow MONETIZATION.md exactly. Every rule is a named constant with a test
+    that fails without it.
+<!-- /if:monetization -->
+
+## 3. Definition of done for a slice
+
+<!-- The canonical list and its order are flagship-method references/planning-and-slices.md §6. Keep
+this copy in the same order; add only this project's sizes, themes and content checks. -->
+
+- [ ] **Plan:** screens and effects planned in DESIGN before building, with the test list and In /
+      Not in; a risky slice had a skeptic review.
+- [ ] **Contracts:** shared formats, ports and file ownership written into ARCHITECTURE before
+      lanes split.
+- [ ] **Build:** every new call read in the installed source. Visual work looked at ≥ 3 times
+      across the look matrix with this project's sizes, themes, lightings and locales (§1);
+      anything that moves watched on a simulator; the quality bar answered in writing. A content or
+      data change read through `[TODO: review command]` the way a user meets it.
+- [ ] **Integration:** one owner per rule; one latest version per saved document; stale wording
+      swept; the integrated build cold-launched and looked at.
+- [ ] **Analysis** clean; the full suite green, slow tests included, run now.
+- [ ] **Review:** an adversarial review ran; reviewers re-ran and re-rendered.
+- [ ] **Fixer:** each finding verified, then fixed with a guard or answered by a recorded decision.
+- [ ] **Guards:** each new guard seen to fail with its fix removed, in an isolated copy, by
+      assertion.
+- [ ] **Final tree:** a confirming look at what the fixes touched; every gate re-run; generators and
+      [TODO: the setup script, or "no setup script"] twice byte-identical; debug builds pass.
+- [ ] **Docs:** DECISIONS, DESIGN "As built", ARCHITECTURE and §6 traps updated; PROGRESS updated
+      (counts, hash, what was not verified, Device checks, the exact next step).
+- [ ] **Commit:** one commit with a scoped message.
+
+## 4. Handoff
+
+End every session by rewriting PROGRESS in its eleven sections: Current phase / Done / In progress
+(the exact next step) / Next / How to verify / Open questions / Device checks / END-OF-PROJECT LIST
+/ Standing owner preferences / Traps hit / Small open items.
+- Leave the tree green. Never commit red.
+- **When low on capacity:** get green, write PROGRESS, record traps. Start nothing new. Write
+  half-done work as "<slice> — in the working tree, not committed: <done / not done>".
+- Record every side effect on a real external system (a probe that reached a production backend, a
+  recording that wrote to a real account), and how the owner should treat it.
+
+## 5. When stuck, and what to ask {{OWNER}}
+
+1. Re-read the docs and the research reports. Read the real API source.
+2. If it is a genuine decision, make the smallest safe assumption, record it in DECISIONS, and
+   continue.
+3. Before asking {{OWNER}} anything, check whether research, the genre or the platform already
+   answers it.
+   - Profile: [TODO: e.g. "a non-technical commissioner who wants you to decide design from
+     evidence; ask only how a finished thing feels" OR "a developer who wants to co-decide
+     architecture; offer options, each with a recommendation"] (DECISIONS #2).
+   - Ask only what only {{OWNER}} can answer: money, accounts, legal identity, keys, how a finished
+     thing feels, scope, release.
+   - Ask in {{OWNER_LANGUAGE}}, briefly, as a numbered list, each item with your recommendation
+     and its reason. Flag anything permanent.
+   - A question waits for its moment in PROGRESS's "Open questions" table. Never wait on an answer:
+     proceed on your recommendation, recorded as an ASSUMED DECISIONS entry, and build nothing
+     permanent on it (§2, invariant 11).
+4. Standing preferences and boundaries live in PROGRESS "Standing owner preferences". A memory note
+   goes only into this project's own memory, never another project's.
+
+## 6. Traps
+
+Entry format (canonical for this log):
+`- **<Mechanism, as a general sentence>.** <What happened here, with numbers>. <Fix>. (<guarding test or tool>)`
+
+- Append-only. Write the trap in the session that hit it, under a dated heading.
+- Mark a repeat "(again)"; never delete either entry.
+- **A trap that bites twice gets promoted** into a lint, a script check, a template line or a
+  CLAUDE.md house rule. Note "promoted to <check>" on the entry.
+- Entries copied from the flagship-method catalogue are converted to this format: the mechanism,
+  then "Here:" and how it applies or already bit in this project, the fix, the guard, and
+  "(catalogue T-n)" at the end. An inherited entry may be one line:
+  `- **<Mechanism>.** <Fix>. (catalogue T-n)`.
+
+New traps: append below, in the session that hit them.
+
+### Inherited (these bite here first)
+
+<!-- At kickoff, copy from flagship-method references/traps.md the entries that apply to this stack
+and domain, converted to the format above; one entry each, and one line is enough. -->
+
+<!-- Retrofit only: add this heading, one entry per fix commit or issue that names a mechanism,
+citing the commit:
+### Inherited (from this project's history)
+- **<Mechanism>.** <commit or issue>: <what happened>. <Fix, or the phase that fixes it>. (<guard>) -->
+
+### Found by research ({{DATE}})
+
+<!-- Traps the research revealed before any code exists, each naming the library or platform
+version researched. -->
+
+<!-- Then, one heading per slice, and a separate one for its fixer pass:
+### Hit in Phase N slice N.M — <topic> (YYYY-MM-DD)
+### Hit in the N.M fixer pass (YYYY-MM-DD)
+
+Example entries (from a shipped puzzle game; the shape matters, not the content):
+- **A guard must fail when the thing it guards is removed.** A "≥ 3:1 line across every wall" guard
+  was met by the gutter between tiles and passed with every wall removed. It now compares the render
+  with the same render without walls, in the region only walls change. (wall contrast test, with an
+  in-file negative control)
+- **A fake that answers at once proves no timeout.** Six plugin-call bounds could be deleted with
+  every test green. The fake now holds each call open, and each test asserts the operation ends
+  within its bound. (service timeout tests, each seen to fail with its bound removed)
+-->
